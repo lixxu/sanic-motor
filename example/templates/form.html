@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit User' if user else 'Add User' }}{% endblock %}
+
+{% block body %}
+  <a class="ui primary button" href="{{ url_for('index') }}">
+  <i class="chevron left icon"></i> {{ _('All Users') }}
+  </a>
+  <div class="ui hidden divider"></div>
+  <form class="ui form" method="post">
+    <h4 class="ui header">{{ 'Edit User' if user else 'Add User' }}</h4>
+    <div class="field">
+      <label>User Name</label>
+      <input name="name" id="name" placeholder="User Name" type="text" value="{{ request.form.get('name') or user.name or '' }}">
+    </div>
+    <div class="field">
+      <label>User Age</label>
+      <input name="age" id="age" placeholder="User Age" type="text" value="{{ request.form.get('age') or user.age or '' }}">
+    </div>
+    <button class="ui button" type="submit">Submit</button>
+  </form>
+{% endblock %}
+
+{% block js %}
+  $('#name').focus();
+{% endblock %}

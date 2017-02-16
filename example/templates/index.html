@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Users{% endblock %}
+
+{% block body %}
+  <a class="ui red button" tabindex="0" href="{{ url_for('new') }}">
+  <i class="big icons">
+    <i class="user icon"></i>
+    <i class="inverted corner add icon"></i>
+  </i> Add User
+  </a>
+  {% if users %}
+    <div class="ui hidden divider"></div>
+    <div class="table-responsive">
+      <table class="ui selectable celled blue table unstackable">
+        <thead>
+          <tr><th>#</th><th>Name</th><th>Age</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ user.name }}</td>
+            <td>{{ user.age }}</td>
+            <td>
+              <a class="ui button" href="{{ url_for('edit', id=user.id) }}">Edit</a>
+              <a class="ui red button need-confirm" href="{{ url_for('destroy', id=user.id) }}">Remove</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block js %}
+  $('.need-confirm').click(function (){
+   var answer = confirm("Are you sure to delete it?");
+      if (answer) {
+        return true;
+      }else{
+        return false;
+      }
+  });
+{% endblock %}
