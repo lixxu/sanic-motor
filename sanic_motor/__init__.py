@@ -297,3 +297,9 @@ class BaseModel:
     @classmethod
     def get_uniq_spec(cls, fields=[], doc={}):
         return get_uniq_spec(fields or cls.__unique_fields__, doc)
+
+    def clean_for_dirty(self, doc, keys=[]):
+        """Remove non-changed items."""
+        for k in keys:
+            if k in doc and doc[k] == self[k]:
+                doc.pop(k)

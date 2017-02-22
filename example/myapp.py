@@ -61,7 +61,11 @@ async def edit(request, id):
             doc = dict(name=name, age=int(age))
             is_uniq = await User.is_unique(doc=doc, id=user.id)
             if is_uniq in (True, None):
-                await User.update_one({'_id': user.id}, {'$set': doc})
+                # remove non-changed items
+                user.clean_for_dirty(doc, keys=['name', 'age'])
+                if doc:
+                    await User.update_one({'_id': user.id}, {'$set': doc})
+
                 jinja.flash('User was updated successfully', 'success')
                 return redirect(app.url_for('index'))
             else:
