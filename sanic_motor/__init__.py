@@ -57,11 +57,11 @@ class BaseModel:
         self.__dict__.update(kwargs)
 
     @classmethod
-    def init_app(cls, app):
+    def init_app(cls, app, open_listener=None, close_listener=None):
         BaseModel.__app__ = app
 
-        @app.listener('after_server_start')
-        async def after_start(*args, **kwargs):
+        @app.listener(open_listener or 'after_server_start')
+        async def open_connection(*args, **kwargs):
             connect = app.config.get('MOTOR_CONNECT', True)
             client = AsyncIOMotorClient(app.config.MOTOR_URI, connect=connect)
             db = client.get_default_database()
@@ -69,8 +69,8 @@ class BaseModel:
             BaseModel.__motor_client__ = client
             BaseModel.__motor_db__ = db
 
-        @app.listener('after_server_stop')
-        async def after_stop(*args, **kwargs):
+        @app.listener(close_listener or 'after_server_stop')
+        async def close_connection(*args, **kwargs):
             app.motor_client.close()
 
     @property
@@ -151,22 +151,32 @@ class BaseModel:
             kwargs.setdefault('limit', per_page)
             kwargs.setdefault('skip', skip)
 
+        # convert to object or keep dict format
+        as_raw = kwargs.pop('as_raw', False)
+        do_async_for = kwargs.pop('do_async_for', True)  # async for result
         kwargs.update(sort=get_sort(kwargs.get('sort')))
         cur = cls.get_collection().find(*args, **kwargs)
         objs = []
-        async for doc in cur:
-            objs.append(cls(**doc))
+        if do_async_for:
+            if as_raw:
+                async for doc in cur:
+                    objs.append(doc)
+
+            else:
+                async for doc in cur:
+                    objs.append(cls(**doc))
 
         cur.objects = objs
         return cur
 
     @classmethod
     async def find_one(cls, filter=None, *args, **kwargs):
+        as_raw = kwargs.pop('as_raw', False)
         if isinstance(filter, (str, ObjectId)):
             filter = dict(_id=cls.get_id(filter))
 
         doc = await cls.get_collection().find_one(filter, *args, **kwargs)
-        return cls(**doc) if doc else None
+        return (doc if as_raw else cls(**doc)) if doc else None
 
     @classmethod
     async def insert_one(cls, doc, **kwargs):
