@@ -25,7 +25,7 @@ class User(BaseModel):
 @app.route('/')
 async def index(request):
     cur = await User.find(sort='name, age desc')
-    return await jinja.render('index.html', users=cur.objects)
+    return await jinja.render('index.html', users=cur.objects, request=request)
 
 
 @app.route('/new', methods=('GET', 'POST'))
@@ -37,21 +37,21 @@ async def new(request):
             is_uniq = await User.is_unique(doc=dict(name=name))
             if is_uniq in (True, None):
                 await User.insert_one(dict(name=name, age=int(age)))
-                jinja.flash('User was added successfully', 'success')
+                request['flash']('User was added successfully', 'success')
                 return redirect(app.url_for('index'))
             else:
-                jinja.flash('This name was already taken', 'error')
+                request['flash']('This name was already taken', 'error')
 
-        jinja.flash('User name is required', 'error')
+        request['flash']('User name is required', 'error')
 
-    return await jinja.render('form.html', user={})
+    return await jinja.render('form.html', user={}, request=request)
 
 
 @app.route('/edit/<id>', methods=('GET', 'POST'))
 async def edit(request, id):
     user = await User.find_one(id)
     if not user:
-        jinja.flash('User not found', 'error')
+        request['flash']('User not found', 'error')
         return redirect(app.url_for('index'))
 
     if request.method == 'POST':
@@ -66,25 +66,25 @@ async def edit(request, id):
                 if doc:
                     await User.update_one({'_id': user.id}, {'$set': doc})
 
-                jinja.flash('User was updated successfully', 'success')
+                request['flash']('User was updated successfully', 'success')
                 return redirect(app.url_for('index'))
             else:
-                jinja.flash('This name was already taken', 'error')
+                request['flash']('This name was already taken', 'error')
 
-        jinja.flash('User name is required', 'error')
+        request['flash']('User name is required', 'error')
 
-    return await jinja.render('form.html', user=user)
+    return await jinja.render('form.html', user=user, request=request)
 
 
 @app.route('/destroy/<id>')
 async def destroy(request, id):
     user = await User.find_one(id)
     if not user:
-        jinja.flash('User not found', 'error')
+        request['flash']('User not found', 'error')
         return redirect(app.url_for('index'))
 
     await user.destroy()
-    jinja.flash('User was deleted successfully', 'success')
+    request['flash']('User was deleted successfully', 'success')
     return redirect(app.url_for('index'))
 
 
