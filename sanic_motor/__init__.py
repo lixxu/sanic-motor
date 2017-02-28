@@ -60,7 +60,7 @@ class BaseModel:
     def init_app(cls, app, open_listener=None, close_listener=None):
         BaseModel.__app__ = app
 
-        @app.listener(open_listener or 'after_server_start')
+        @app.listener(open_listener or 'before_server_start')
         async def open_connection(*args, **kwargs):
             connect = app.config.get('MOTOR_CONNECT', True)
             client = AsyncIOMotorClient(app.config.MOTOR_URI, connect=connect)
@@ -69,7 +69,7 @@ class BaseModel:
             BaseModel.__motor_client__ = client
             BaseModel.__motor_db__ = db
 
-        @app.listener(close_listener or 'after_server_stop')
+        @app.listener(close_listener or 'before_server_stop')
         async def close_connection(*args, **kwargs):
             app.motor_client.close()
 
