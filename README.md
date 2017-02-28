@@ -39,7 +39,7 @@ class User(BaseModel):
 @app.route('/')
 async def index(request):
     cur = await User.find(sort='name')
-    return await jinja.render('index.html', users=cur.objects, request=request)
+    return await jinja.render('index.html', request, users=cur.objects)
 
 
 if __name__ == '__main__':

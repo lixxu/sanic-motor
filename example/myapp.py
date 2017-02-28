@@ -25,7 +25,7 @@ class User(BaseModel):
 @app.route('/')
 async def index(request):
     cur = await User.find(sort='name, age desc')
-    return await jinja.render('index.html', users=cur.objects, request=request)
+    return await jinja.render('index.html', request, users=cur.objects)
 
 
 @app.route('/new', methods=('GET', 'POST'))
@@ -44,7 +44,7 @@ async def new(request):
 
         request['flash']('User name is required', 'error')
 
-    return await jinja.render('form.html', user={}, request=request)
+    return await jinja.render('form.html', request, user={})
 
 
 @app.route('/edit/<id>', methods=('GET', 'POST'))
@@ -73,7 +73,7 @@ async def edit(request, id):
 
         request['flash']('User name is required', 'error')
 
-    return await jinja.render('form.html', user=user, request=request)
+    return await jinja.render('form.html', request, user=user)
 
 
 @app.route('/destroy/<id>')
