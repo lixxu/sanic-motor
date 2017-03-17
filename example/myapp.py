@@ -62,7 +62,7 @@ async def edit(request, id):
             is_uniq = await User.is_unique(doc=doc, id=user.id)
             if is_uniq in (True, None):
                 # remove non-changed items
-                user.clean_for_dirty(doc, keys=['name', 'age'])
+                user.clean_for_dirty(doc)
                 if doc:
                     await User.update_one({'_id': user.id}, {'$set': doc})
 

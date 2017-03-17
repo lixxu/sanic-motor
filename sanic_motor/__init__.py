@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from sanic.log import log
 from pymongo import (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE,
                      HASHED, TEXT)
 from bson.objectid import ObjectId
@@ -64,18 +65,27 @@ class BaseModel:
         if open_listener:
             @app.listener(open_listener)
             async def open_connection(app, loop):
-                connect = app.config.get('MOTOR_CONNECT', True)
-                client = AsyncIOMotorClient(app.config.MOTOR_URI,
-                                            connect=connect)
-                db = client.get_default_database()
-                app.motor_client = client
-                BaseModel.__motor_client__ = client
-                BaseModel.__motor_db__ = db
+                cls.default_open_connection(app, loop)
 
         if close_listener:
             @app.listener(close_listener)
             async def close_connection(app, loop):
-                app.motor_client.close()
+                cls.default_close_connection(app, loop)
+
+    @classmethod
+    def default_open_connection(cls, app, loop):
+        log.info('opening motor connection')
+        client = AsyncIOMotorClient(app.config.MOTOR_URI, io_loop=loop)
+        db = client.get_default_database()
+        app.motor_client = client
+        BaseModel.__motor_client__ = client
+        BaseModel.__motor_db__ = db
+
+    @classmethod
+    def default_close_connection(cls, app, loop):
+        if hasattr(app, 'motor_client'):
+            log.info('closing motor connection')
+            app.motor_client.close()
 
     @property
     def id(self):
