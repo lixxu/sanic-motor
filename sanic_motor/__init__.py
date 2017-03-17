@@ -57,21 +57,25 @@ class BaseModel:
         self.__dict__.update(kwargs)
 
     @classmethod
-    def init_app(cls, app, open_listener=None, close_listener=None):
+    def init_app(cls, app, open_listener='before_server_start',
+                 close_listener='before_server_stop'):
         BaseModel.__app__ = app
 
-        @app.listener(open_listener or 'before_server_start')
-        async def open_connection(*args, **kwargs):
-            connect = app.config.get('MOTOR_CONNECT', True)
-            client = AsyncIOMotorClient(app.config.MOTOR_URI, connect=connect)
-            db = client.get_default_database()
-            app.motor_client = client
-            BaseModel.__motor_client__ = client
-            BaseModel.__motor_db__ = db
+        if open_listener:
+            @app.listener(open_listener)
+            async def open_connection(app, loop):
+                connect = app.config.get('MOTOR_CONNECT', True)
+                client = AsyncIOMotorClient(app.config.MOTOR_URI,
+                                            connect=connect)
+                db = client.get_default_database()
+                app.motor_client = client
+                BaseModel.__motor_client__ = client
+                BaseModel.__motor_db__ = db
 
-        @app.listener(close_listener or 'before_server_stop')
-        async def close_connection(*args, **kwargs):
-            app.motor_client.close()
+        if close_listener:
+            @app.listener(close_listener)
+            async def close_connection(app, loop):
+                app.motor_client.close()
 
     @property
     def id(self):
@@ -100,6 +104,7 @@ class BaseModel:
         return '{}'.format(self.__dict__)
 
     def __getattr__(self, key):
+        """just return None instead of key error"""
         return None
 
     @classmethod
@@ -308,8 +313,9 @@ class BaseModel:
     def get_uniq_spec(cls, fields=[], doc={}):
         return get_uniq_spec(fields or cls.__unique_fields__, doc)
 
-    def clean_for_dirty(self, doc, keys=[]):
+    def clean_for_dirty(self, doc={}, keys=[]):
         """Remove non-changed items."""
-        for k in keys:
-            if k in doc and doc[k] == self[k]:
+        dct = self.__dict__
+        for k in (keys or doc.keys()):
+            if k in doc and k in dct and doc[k] == dct[k]:
                 doc.pop(k)
