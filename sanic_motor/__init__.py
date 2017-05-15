@@ -57,23 +57,23 @@ class BaseModel:
     def __init__(self, *args, **kwargs):
         self.__dict__.update(kwargs)
 
-    @classmethod
-    def init_app(cls, app, open_listener='before_server_start',
+    @staticmethod
+    def init_app(app, open_listener='before_server_start',
                  close_listener='before_server_stop'):
         BaseModel.__app__ = app
 
         if open_listener:
             @app.listener(open_listener)
             async def open_connection(app, loop):
-                cls.default_open_connection(app, loop)
+                BaseModel.default_open_connection(app, loop)
 
         if close_listener:
             @app.listener(close_listener)
             async def close_connection(app, loop):
-                cls.default_close_connection(app, loop)
+                BaseModel.default_close_connection(app, loop)
 
-    @classmethod
-    def default_open_connection(cls, app, loop):
+    @staticmethod
+    def default_open_connection(app, loop):
         log.info('opening motor connection')
         client = AsyncIOMotorClient(app.config.MOTOR_URI, io_loop=loop)
         db = client.get_default_database()
@@ -81,8 +81,8 @@ class BaseModel:
         BaseModel.__motor_client__ = client
         BaseModel.__motor_db__ = db
 
-    @classmethod
-    def default_close_connection(cls, app, loop):
+    @staticmethod
+    def default_close_connection(app, loop):
         if hasattr(app, 'motor_client'):
             log.info('closing motor connection')
             app.motor_client.close()
@@ -122,10 +122,7 @@ class BaseModel:
         if not cls.__coll__:
             raise ValueError('collection name is required, cls.__coll__')
 
-        if not cls.__collection__:
-            cls.__collection__ = cls.__motor_db__[cls.__coll__]
-
-        return cls.__collection__
+        return cls.__motor_db__[cls.__coll__]
 
     @classmethod
     async def is_unique(cls, fields=[], doc={}, id=None):

@@ -2,6 +2,7 @@
 example/test.db
 example/app.cfg
 venv
+*.log
 
 # Packages
 *.egg
