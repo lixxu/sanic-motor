@@ -4,6 +4,7 @@
 from sanic.log import log
 from pymongo import (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE,
                      HASHED, TEXT)
+import bson
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -99,7 +100,7 @@ class BaseModel:
                 if str(oid) == _id:
                     return oid
 
-            except:
+            except bson.errors.InvalidId:
                 pass
 
         return _id
@@ -142,12 +143,12 @@ class BaseModel:
         per_page = request.args.get(per_page_name, 10)
         try:
             per_page = int(per_page)
-        except:
+        except (ValueError, TypeError):
             per_page = 10
 
         try:
             page = int(page)
-        except:
+        except (ValueError, TypeError):
             page = 1
 
         return page, per_page, per_page * (page - 1)
