@@ -34,6 +34,7 @@ jinja = SanicJinja2(app, autoescape=True)
 class User(BaseModel):
     __coll__ = 'users'
     __unique_fields__ = ['name']
+    # __unique_fields__ = ['name, age']   # name and age for unique
 
 
 @app.route('/')

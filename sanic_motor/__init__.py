@@ -43,7 +43,16 @@ def get_sort(sort):
 
 
 def get_uniq_spec(fields=[], doc={}):
-    specs = [{k: v} for k, v in doc.items() if k in fields]
+    specs = []
+    for field in fields:
+        spec = {}
+        for k in [f.strip() for f in field.split(',') if f.strip()]:
+            if k in doc:
+                spec[k] = doc[k]
+
+        if spec:
+            specs.append(spec)
+
     return {'$or': specs} if specs else None
 
 
