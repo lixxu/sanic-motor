@@ -4,7 +4,6 @@
 from sanic.log import log
 from pymongo import (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE,
                      HASHED, TEXT)
-import bson
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -102,17 +101,8 @@ class BaseModel:
         return self['_id']
 
     @classmethod
-    def get_id(cls, _id):
-        if isinstance(_id, str):
-            try:
-                oid = ObjectId(_id)
-                if str(oid) == _id:
-                    return oid
-
-            except bson.errors.InvalidId:
-                pass
-
-        return _id
+    def get_oid(cls, _id):
+        return ObjectId(_id) if ObjectId.is_valid(_id) else _id
 
     def __getitem__(self, key):
         return self.__dict__.get(key)
@@ -195,7 +185,7 @@ class BaseModel:
     async def find_one(cls, filter=None, *args, **kwargs):
         as_raw = kwargs.pop('as_raw', False)
         if isinstance(filter, (str, ObjectId)):
-            filter = dict(_id=cls.get_id(filter))
+            filter = dict(_id=cls.get_oid(filter))
 
         doc = await cls.get_collection().find_one(filter, *args, **kwargs)
         return (doc if as_raw else cls(**doc)) if doc else None
