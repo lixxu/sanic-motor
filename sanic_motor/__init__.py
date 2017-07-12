@@ -158,10 +158,10 @@ class BaseModel:
         per_page = kwargs.get(per_page_name)
         if request:
             if not page:
-                page = request.args.get(page_name)
+                page = request.args.get(page_name, 1)
 
             if not per_page:
-                per_page = request.args.get(per_page_name)
+                per_page = request.args.get(per_page_name, 10)
 
         if not (page and per_page):
             return 0, 0, 0
