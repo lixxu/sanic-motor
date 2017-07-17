@@ -141,13 +141,13 @@ class BaseModel:
         return cls.__motor_dbs__[db][cls.__coll__]
 
     @classmethod
-    async def is_unique(cls, fields=[], doc={}, id=None):
+    async def is_unique(cls, fields=[], doc={}, id=None, *args, **kwargs):
         spec = get_uniq_spec(fields or cls.__unique_fields__, doc)
         if spec:
             if id:
                 spec['_id'] = {'$ne': id}
 
-            return await cls.find_one(spec)
+            return await cls.find_one(spec, *args, **kwargs)
 
         return True
 
