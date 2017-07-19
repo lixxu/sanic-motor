@@ -56,7 +56,8 @@ def get_uniq_spec(fields=[], doc={}):
 
 
 class BaseModel:
-    __coll__ = None
+    __coll__ = None  # collection name
+    __dbkey__ = None  # which database connected to?
     __unique_fields__ = []
     __motor_client__ = None
     __motor_db__ = None
@@ -133,10 +134,10 @@ class BaseModel:
     @classmethod
     def get_collection(cls, db=None):
         if not cls.__coll__:
-            raise ValueError('collection name is required, cls.__coll__')
+            raise ValueError('collection name is required, set __coll__')
 
         if not db:
-            db = cls.__app__.name
+            db = cls.__dbkey__ or cls.__app__.name
 
         return cls.__motor_dbs__[db][cls.__coll__]
 
