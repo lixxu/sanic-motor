@@ -7,7 +7,7 @@ from setuptools import setup
 
 setup(
     name='sanic-motor',
-    version='0.2.4',
+    version='0.2.5',
     url='https://github.com/lixxu/sanic-motor',
     license='BSD',
     author='Lix Xu',

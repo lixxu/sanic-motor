@@ -148,7 +148,8 @@ class BaseModel:
             if id:
                 spec['_id'] = {'$ne': id}
 
-            return await cls.find_one(spec, *args, **kwargs)
+            doc = await cls.find_one(spec, *args, **kwargs)
+            return False if doc else True
 
         return True
 
