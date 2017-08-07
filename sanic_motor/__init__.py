@@ -382,6 +382,9 @@ class BaseModel:
     def clean_for_dirty(self, doc={}, keys=[]):
         """Remove non-changed items."""
         dct = self.__dict__
-        for k in (keys or doc.keys()):
+        for k in (keys or list(doc.keys())):
+            if k == '_id':
+                return
+
             if k in doc and k in dct and doc[k] == dct[k]:
                 doc.pop(k)
