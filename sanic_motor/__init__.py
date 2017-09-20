@@ -4,6 +4,7 @@
 from sanic.log import log
 from pymongo import (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE,
                      HASHED, TEXT)
+from bson.codec_options import CodecOptions
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -65,6 +66,7 @@ class BaseModel:
     __motor_dbs__ = {}
     __app__ = None
     __apps__ = {}
+    __timezone__ = None
 
     def __init__(self, *args, **kwargs):
         self.__dict__.update(kwargs)
@@ -181,6 +183,34 @@ class BaseModel:
         return page, per_page, per_page * (page - 1)
 
     @classmethod
+    def get_tzinfo(cls, **kwargs):
+        if 'timezone' in kwargs:
+            timezone = kwargs['timezone']
+        else:
+            timezone = cls.__timezone__
+
+        if timezone:
+            if isinstance(timezone, str):
+                try:
+                    import pytz
+
+                    return pytz.timezone(timezone)
+                except ImportError:
+                    return None
+
+            return timezone
+
+        return None
+
+    @classmethod
+    def wrap_coll_tzinfo(cls, coll, tzinfo=None):
+        if tzinfo:
+            return coll.with_options(codec_options=CodecOptions(tz_aware=True,
+                                                                tzinfo=tzinfo))
+
+        return coll
+
+    @classmethod
     async def find(cls, request=None, *args, **kwargs):
         page_name = kwargs.pop('page_name', 'page')
         per_page_name = kwargs.pop('per_page_name', 'per_page')
@@ -201,7 +231,11 @@ class BaseModel:
         kwargs.update(sort=get_sort(kwargs.get('sort')))
 
         db = kwargs.pop('db', None)
-        cur = cls.get_collection(db).find(*args, **kwargs)
+        tzinfo = cls.get_tzinfo(**kwargs)
+        kwargs.pop('timezone', None)
+
+        coll = cls.wrap_coll_tzinfo(cls.get_collection(db), tzinfo)
+        cur = coll.find(*args, **kwargs)
         objs = []
         if do_async_for:
             if as_raw:
@@ -222,7 +256,11 @@ class BaseModel:
         if isinstance(filter, (str, ObjectId)):
             filter = dict(_id=cls.get_oid(filter))
 
-        doc = await cls.get_collection(db).find_one(filter, *args, **kwargs)
+        tzinfo = cls.get_tzinfo(**kwargs)
+        kwargs.pop('timezone', None)
+
+        coll = cls.wrap_coll_tzinfo(cls.get_collection(db), tzinfo)
+        doc = await coll.find_one(filter, *args, **kwargs)
         return (doc if as_raw else cls(**doc)) if doc else None
 
     @classmethod
