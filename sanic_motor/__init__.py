@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from sanic.log import log
+try:
+    from sanic.log import logger
+except ImportError:
+    from sanic.log import log as logger
+
 from pymongo import (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE,
                      HASHED, TEXT)
 from bson.codec_options import CodecOptions
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
+
+__version__ = '0.2.8'
 
 INDEX_NAMES = dict(asc=ASCENDING, ascending=ASCENDING,
                    desc=DESCENDING, descending=DESCENDING,
@@ -92,7 +98,7 @@ class BaseModel:
         if not name:
             name = app.name
 
-        log.info('opening motor connection for [{}]'.format(name))
+        logger.info('opening motor connection for [{}]'.format(name))
         client = AsyncIOMotorClient(uri or app.config.MOTOR_URI, io_loop=loop)
         db = client.get_default_database()
         app.motor_client = client
@@ -109,7 +115,7 @@ class BaseModel:
     def default_close_connection(app, loop):
         if hasattr(app, 'motor_clients'):
             for name, client in app.motor_clients.items():
-                log.info('closing motor connection for [{}]'.format(name))
+                logger.info('closing motor connection for [{}]'.format(name))
                 client.close()
 
     @property
