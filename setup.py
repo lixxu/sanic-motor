@@ -12,7 +12,7 @@ if platform.system().startswith('Windows'):
 
 setup(
     name='sanic-motor',
-    version='0.3.0',
+    version='0.3.1',
     url='https://github.com/lixxu/sanic-motor',
     license='BSD',
     author='Lix Xu',

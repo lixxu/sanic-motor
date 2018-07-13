@@ -344,7 +344,7 @@ class BaseModel:
         return await cls.count_documents(*args, **kwargs)
 
     @classmethod
-    async def count_documents(cls, filter=None, **kwargs):
+    async def count_documents(cls, filter={}, **kwargs):
         db = kwargs.pop('db', None)
         return await cls.get_collection(db).count_documents(filter, **kwargs)
 
