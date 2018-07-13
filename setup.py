@@ -3,11 +3,16 @@ sanic-motor
 --------------
 Simple Motor wrapper for sanic
 """
+import os
+import platform
 from setuptools import setup
+
+if platform.system().startswith('Windows'):
+    os.environ['SANIC_NO_UVLOOP'] = 'yes'
 
 setup(
     name='sanic-motor',
-    version='0.2.8',
+    version='0.3.0',
     url='https://github.com/lixxu/sanic-motor',
     license='BSD',
     author='Lix Xu',
@@ -17,7 +22,7 @@ setup(
     packages=['sanic_motor'],
     zip_safe=False,
     platforms='any',
-    install_requires=['motor>=1.0', 'sanic>=0.4.0'],
+    install_requires=['motor>=2.0', 'sanic>=0.4.0'],
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -28,5 +33,6 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ]
 )

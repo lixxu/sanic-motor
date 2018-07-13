@@ -100,7 +100,7 @@ class BaseModel:
 
         logger.info('opening motor connection for [{}]'.format(name))
         client = AsyncIOMotorClient(uri or app.config.MOTOR_URI, io_loop=loop)
-        db = client.get_default_database()
+        db = client.get_database()
         app.motor_client = client
         BaseModel.__motor_client__ = client
         BaseModel.__motor_db__ = db
@@ -341,8 +341,12 @@ class BaseModel:
 
     @classmethod
     async def count(cls, *args, **kwargs):
+        return await cls.count_documents(*args, **kwargs)
+
+    @classmethod
+    async def count_documents(cls, filter=None, **kwargs):
         db = kwargs.pop('db', None)
-        return await cls.get_collection(db).count(*args, **kwargs)
+        return await cls.get_collection(db).count_documents(filter, **kwargs)
 
     @classmethod
     async def distinct(cls, key, *args, **kwargs):
@@ -382,7 +386,10 @@ class BaseModel:
     @classmethod
     async def group(cls, *args, **kwargs):
         db = kwargs.pop('db', None)
-        return await cls.get_collection(db).group(*args, **kwargs)
+        if not db:
+            db = cls.__dbkey__ or cls.__app__.name
+
+        return await cls.__motor_dbs__[db].command('group', *args, **kwargs)
 
     @classmethod
     async def index_information(cls, db=None):
@@ -400,11 +407,6 @@ class BaseModel:
     @classmethod
     async def options(cls, db=None):
         return await cls.get_collection(db).options()
-
-    @classmethod
-    def parallel_scan(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
-        return cls.get_collection(db).parallel_scan(*args, **kwargs)
 
     @classmethod
     async def reindex(cls, db=None):
