@@ -6,13 +6,14 @@ Simple Motor wrapper for sanic
 import os
 import platform
 from setuptools import setup
+import sanic_motor
 
 if platform.system().startswith('Windows'):
     os.environ['SANIC_NO_UVLOOP'] = 'yes'
 
 setup(
     name='sanic-motor',
-    version='0.3.1',
+    version=sanic_motor.__version__,
     url='https://github.com/lixxu/sanic-motor',
     license='BSD',
     author='Lix Xu',
