@@ -12,7 +12,7 @@ from bson.codec_options import CodecOptions
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 
 INDEX_NAMES = dict(asc=ASCENDING, ascending=ASCENDING,
                    desc=DESCENDING, descending=DESCENDING,

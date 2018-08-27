@@ -12,7 +12,7 @@ if platform.system().startswith('Windows'):
     os.environ['SANIC_NO_UVLOOP'] = 'yes'
 
 p = Path(__file__) / '../sanic_motor/__init__.py'
-with p.open(encoding='utf-8') as f:
+with p.resolve().open(encoding='utf-8') as f:
     for line in f:
         if line.startswith('__version__ = '):
             version = line.split('=')[-1].strip().replace("'", '')
