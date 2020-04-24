@@ -6,22 +6,32 @@ try:
 except ImportError:
     from sanic.log import log as logger
 
-from pymongo import (ASCENDING, DESCENDING, GEO2D, GEOHAYSTACK, GEOSPHERE,
-                     HASHED, TEXT)
+from pymongo import (
+    ASCENDING,
+    DESCENDING,
+    GEO2D,
+    GEOHAYSTACK,
+    GEOSPHERE,
+    HASHED,
+    TEXT,
+)
 from bson.codec_options import CodecOptions
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
-__version__ = '0.3.4'
+__version__ = "0.4.0"
 
-INDEX_NAMES = dict(asc=ASCENDING, ascending=ASCENDING,
-                   desc=DESCENDING, descending=DESCENDING,
-                   geo2d=GEO2D,
-                   geohaystack=GEOHAYSTACK,
-                   geosphere=GEOSPHERE,
-                   hashed=HASHED,
-                   text=TEXT,
-                   )
+INDEX_NAMES = dict(
+    asc=ASCENDING,
+    ascending=ASCENDING,
+    desc=DESCENDING,
+    descending=DESCENDING,
+    geo2d=GEO2D,
+    geohaystack=GEOHAYSTACK,
+    geosphere=GEOSPHERE,
+    hashed=HASHED,
+    text=TEXT,
+)
 
 
 def get_sort(sort):
@@ -29,15 +39,15 @@ def get_sort(sort):
         return sort
 
     sorts = []
-    for items in sort.strip().split(';'):  # ; for many indexes
+    for items in sort.strip().split(";"):  # ; for many indexes
         items = items.strip()
         if items:
             lst = []
-            for item in items.split(','):
+            for item in items.split(","):
                 item = item.strip()
                 if item:
-                    if ' ' in item:
-                        field, _sort = item.replace('  ', ' ').split(' ')[:2]
+                    if " " in item:
+                        field, _sort = item.replace("  ", " ").split(" ")[:2]
                         lst.append((field, INDEX_NAMES[_sort.lower()]))
                     else:
                         lst.append((item, ASCENDING))
@@ -52,14 +62,14 @@ def get_uniq_spec(fields=[], doc={}):
     specs = []
     for field in fields:
         spec = {}
-        for k in [f.strip() for f in field.split(',') if f.strip()]:
+        for k in [f.strip() for f in field.split(",") if f.strip()]:
             if k in doc:
                 spec[k] = doc[k]
 
         if spec:
             specs.append(spec)
 
-    return {'$or': specs} if specs else None
+    return {"$or": specs} if specs else None
 
 
 class BaseModel:
@@ -77,50 +87,64 @@ class BaseModel:
     def __init__(self, *args, **kwargs):
         self.__dict__.update(kwargs)
 
-    @staticmethod
-    def init_app(app, open_listener='before_server_start',
-                 close_listener='before_server_stop', name=None, uri=None):
-        BaseModel.__app__ = app
-        BaseModel.__apps__[name or app.name] = app
+    @classmethod
+    def init_app(
+        cls,
+        app,
+        open_listener="before_server_start",
+        close_listener="before_server_stop",
+        name=None,
+        uri=None,
+    ):
+        cls.__app__ = app
+        cls.__apps__[name or app.name] = app
 
         if open_listener:
+
             @app.listener(open_listener)
             async def open_connection(app, loop):
-                BaseModel.default_open_connection(app, loop, name, uri)
+                cls.default_open_connection(app, loop, name, uri)
 
         if close_listener:
+
             @app.listener(close_listener)
             async def close_connection(app, loop):
-                BaseModel.default_close_connection(app, loop)
+                cls.default_close_connection(app, loop)
 
-    @staticmethod
-    def default_open_connection(app, loop, name=None, uri=None):
+    @classmethod
+    def default_open_connection(cls, app, loop, name=None, uri=None):
         if not name:
             name = app.name
 
-        logger.info('opening motor connection for [{}]'.format(name))
-        client = AsyncIOMotorClient(uri or app.config.MOTOR_URI, io_loop=loop)
+        logger.info("opening motor connection for [{}]".format(name))
+        cls.connect_database(app, name, uri or app.config.MOTOR_URI, loop)
+        app.motor_client = app.motor_clients[name]
+
+    @classmethod
+    def connect_database(cls, app, name, uri, loop):
+        client = AsyncIOMotorClient(uri, io_loop=loop)
         db = client.get_database()
-        app.motor_client = client
-        BaseModel.__motor_client__ = client
-        BaseModel.__motor_db__ = db
-        if not hasattr(app, 'motor_clients'):
+        cls.__dbkey__ = name
+        cls.__motor_client__ = client
+        cls.__motor_db__ = db
+        if not hasattr(app, "motor_clients"):
             app.motor_clients = {}
 
+        # for closing use
         app.motor_clients[name] = client
-        BaseModel.__motor_clients__[name] = client
-        BaseModel.__motor_dbs__[name] = db
+        cls.__motor_clients__[name] = client
+        cls.__motor_dbs__[name] = db
 
     @staticmethod
     def default_close_connection(app, loop):
-        if hasattr(app, 'motor_clients'):
+        if hasattr(app, "motor_clients"):
             for name, client in app.motor_clients.items():
-                logger.info('closing motor connection for [{}]'.format(name))
+                logger.info("closing motor connection for [{}]".format(name))
                 client.close()
 
     @property
     def id(self):
-        return self['_id']
+        return self["_id"]
 
     @classmethod
     def get_oid(cls, _id):
@@ -133,7 +157,7 @@ class BaseModel:
         self.__dict__[key] = value
 
     def __repr__(self):
-        return '{}'.format(self.__dict__)
+        return "{}".format(self.__dict__)
 
     def __getattr__(self, key):
         """just return None instead of key error"""
@@ -141,20 +165,24 @@ class BaseModel:
 
     @classmethod
     def get_collection(cls, db=None):
-        if not cls.__coll__:
-            raise ValueError('collection name is required, set __coll__')
+        if "__coll__" not in cls.__dict__:
+            raise ValueError(
+                "collection name is required, set {}.__coll__".format(
+                    cls.__name__
+                )
+            )
 
         if not db:
             db = cls.__dbkey__ or cls.__app__.name
 
-        return cls.__motor_dbs__[db][cls.__coll__]
+        return cls.__motor_dbs__[db][cls.__dict__["__coll__"]]
 
     @classmethod
     async def is_unique(cls, fields=[], doc={}, id=None, *args, **kwargs):
         spec = get_uniq_spec(fields or cls.__unique_fields__, doc)
         if spec:
             if id:
-                spec['_id'] = {'$ne': id}
+                spec["_id"] = {"$ne": id}
 
             doc = await cls.find_one(spec, *args, **kwargs)
             return False if doc else True
@@ -162,8 +190,9 @@ class BaseModel:
         return True
 
     @classmethod
-    def get_page_args(cls, request=None, page_name='page',
-                      per_page_name='per_page', **kwargs):
+    def get_page_args(
+        cls, request=None, page_name="page", per_page_name="per_page", **kwargs
+    ):
         page = kwargs.get(page_name)
         per_page = kwargs.get(per_page_name)
         if request:
@@ -190,8 +219,8 @@ class BaseModel:
 
     @classmethod
     def get_tzinfo(cls, **kwargs):
-        if 'timezone' in kwargs:
-            timezone = kwargs['timezone']
+        if "timezone" in kwargs:
+            timezone = kwargs["timezone"]
         else:
             timezone = cls.__timezone__
 
@@ -211,34 +240,36 @@ class BaseModel:
     @classmethod
     def wrap_coll_tzinfo(cls, coll, tzinfo=None):
         if tzinfo:
-            return coll.with_options(codec_options=CodecOptions(tz_aware=True,
-                                                                tzinfo=tzinfo))
+            return coll.with_options(
+                codec_options=CodecOptions(tz_aware=True, tzinfo=tzinfo)
+            )
 
         return coll
 
     @classmethod
     async def find(cls, request=None, *args, **kwargs):
-        page_name = kwargs.pop('page_name', 'page')
-        per_page_name = kwargs.pop('per_page_name', 'per_page')
-        page, per_page, skip = cls.get_page_args(request, page_name,
-                                                 per_page_name, **kwargs)
+        page_name = kwargs.pop("page_name", "page")
+        per_page_name = kwargs.pop("per_page_name", "per_page")
+        page, per_page, skip = cls.get_page_args(
+            request, page_name, per_page_name, **kwargs
+        )
         if per_page:
-            kwargs.setdefault('limit', per_page)
+            kwargs.setdefault("limit", per_page)
 
         if skip:
-            kwargs.setdefault('skip', skip)
+            kwargs.setdefault("skip", skip)
 
         kwargs.pop(page_name, None)
         kwargs.pop(per_page_name, None)
 
         # convert to object or keep dict format
-        as_raw = kwargs.pop('as_raw', False)
-        do_async_for = kwargs.pop('do_async_for', True)  # async for result
-        kwargs.update(sort=get_sort(kwargs.get('sort')))
+        as_raw = kwargs.pop("as_raw", False)
+        do_async_for = kwargs.pop("do_async_for", True)  # async for result
+        kwargs.update(sort=get_sort(kwargs.get("sort")))
 
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         tzinfo = cls.get_tzinfo(**kwargs)
-        kwargs.pop('timezone', None)
+        kwargs.pop("timezone", None)
 
         coll = cls.wrap_coll_tzinfo(cls.get_collection(db), tzinfo)
         cur = coll.find(*args, **kwargs)
@@ -257,13 +288,13 @@ class BaseModel:
 
     @classmethod
     async def find_one(cls, filter=None, *args, **kwargs):
-        db = kwargs.pop('db', None)
-        as_raw = kwargs.pop('as_raw', False)
+        db = kwargs.pop("db", None)
+        as_raw = kwargs.pop("as_raw", False)
         if isinstance(filter, (str, ObjectId)):
             filter = dict(_id=cls.get_oid(filter))
 
         tzinfo = cls.get_tzinfo(**kwargs)
-        kwargs.pop('timezone', None)
+        kwargs.pop("timezone", None)
 
         coll = cls.wrap_coll_tzinfo(cls.get_collection(db), tzinfo)
         doc = await coll.find_one(filter, *args, **kwargs)
@@ -271,45 +302,45 @@ class BaseModel:
 
     @classmethod
     async def insert_one(cls, doc, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).insert_one(doc, **kwargs)
 
     @classmethod
     async def insert_many(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).insert_many(*args, **kwargs)
 
     @classmethod
     async def update_one(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).update_one(*args, **kwargs)
 
     @classmethod
     async def update_many(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).update_many(*args, **kwargs)
 
     @classmethod
     async def replace_one(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).replace_one(*args, **kwargs)
 
     @classmethod
     async def delete_one(cls, filter, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).delete_one(filter, **kwargs)
 
     @classmethod
     async def delete_many(cls, filter, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).delete_many(filter, **kwargs)
 
     async def destroy(self, **kwargs):
-        return await self.__class__.delete_one({'_id': self.id}, **kwargs)
+        return await self.__class__.delete_one({"_id": self.id}, **kwargs)
 
     @classmethod
     async def aggregate(cls, pipeline, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         docs = []
         async for doc in cls.get_collection(db).aggregate(pipeline, **kwargs):
             docs.append(doc)
@@ -318,12 +349,12 @@ class BaseModel:
 
     @classmethod
     async def bulk_write(cls, requests, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).bulk_write(requests, **kwargs)
 
     @classmethod
     async def create_index(cls, keys, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         keys = get_sort(keys)
         coll = cls.get_collection(db)
         if keys and isinstance(keys, list):
@@ -336,7 +367,7 @@ class BaseModel:
 
     @classmethod
     async def create_indexes(cls, indexes, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).create_indexes(indexes)
 
     @classmethod
@@ -345,17 +376,17 @@ class BaseModel:
 
     @classmethod
     async def count_documents(cls, filter={}, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).count_documents(filter, **kwargs)
 
     @classmethod
     async def distinct(cls, key, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).distinct(key, *args, **kwargs)
 
     @classmethod
     async def drop_index(cls, index_or_name, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).drop_index(index_or_name)
 
     @classmethod
@@ -364,32 +395,35 @@ class BaseModel:
 
     @classmethod
     async def find_one_and_delete(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
-        kwargs.update(sort=get_sort(kwargs.pop('sort', None)))
-        return await cls.get_collection(db).find_one_and_delete(*args,
-                                                                **kwargs)
+        db = kwargs.pop("db", None)
+        kwargs.update(sort=get_sort(kwargs.pop("sort", None)))
+        return await cls.get_collection(db).find_one_and_delete(
+            *args, **kwargs
+        )
 
     @classmethod
     async def find_one_and_replace(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
-        kwargs.update(sort=get_sort(kwargs.pop('sort', None)))
-        return await cls.get_collection(db).find_one_and_replace(*args,
-                                                                 **kwargs)
+        db = kwargs.pop("db", None)
+        kwargs.update(sort=get_sort(kwargs.pop("sort", None)))
+        return await cls.get_collection(db).find_one_and_replace(
+            *args, **kwargs
+        )
 
     @classmethod
     async def find_one_and_update(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
-        kwargs.update(sort=get_sort(kwargs.pop('sort', None)))
-        return await cls.get_collection(db).find_one_and_update(*args,
-                                                                **kwargs)
+        db = kwargs.pop("db", None)
+        kwargs.update(sort=get_sort(kwargs.pop("sort", None)))
+        return await cls.get_collection(db).find_one_and_update(
+            *args, **kwargs
+        )
 
     @classmethod
     async def group(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         if not db:
             db = cls.__dbkey__ or cls.__app__.name
 
-        return await cls.__motor_dbs__[db].command('group', *args, **kwargs)
+        return await cls.__motor_dbs__[db].command("group", *args, **kwargs)
 
     @classmethod
     async def index_information(cls, db=None):
@@ -401,7 +435,7 @@ class BaseModel:
 
     @classmethod
     async def map_reduce(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return await cls.get_collection(db).map_reduce(*args, **kwargs)
 
     @classmethod
@@ -414,7 +448,7 @@ class BaseModel:
 
     @classmethod
     def with_options(cls, *args, **kwargs):
-        db = kwargs.pop('db', None)
+        db = kwargs.pop("db", None)
         return cls.get_collection(db).with_options(*args, **kwargs)
 
     @classmethod
@@ -428,8 +462,8 @@ class BaseModel:
     def clean_for_dirty(self, doc={}, keys=[]):
         """Remove non-changed items."""
         dct = self.__dict__
-        for k in (keys or list(doc.keys())):
-            if k == '_id':
+        for k in keys or list(doc.keys()):
+            if k == "_id":
                 return
 
             if k in doc and k in dct and doc[k] == dct[k]:
