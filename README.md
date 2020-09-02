@@ -17,6 +17,7 @@ Works on Sanic >= 0.4.0 and MOTOR_URI need to be defined in app.config
 # -*- coding: utf-8 -*-
 
 from sanic import Sanic
+from sanic.response import json
 from sanic_jinja2 import SanicJinja2
 from sanic_motor import BaseModel
 
@@ -41,6 +42,15 @@ class User(BaseModel):
 async def index(request):
     cur = await User.find(sort='name')
     return jinja.render('index.html', request, users=cur.objects)
+
+
+@app.route("/show/<id>")
+async def show(request, id):
+    # add as_raw = True to get the dict format record
+    user_dict = await User.find_one(id, as_raw=True)
+
+    # user = await User.find_one(id)
+    return json(dict(user=user_dict))
 
 
 if __name__ == '__main__':
