@@ -3,6 +3,8 @@ Simple motor wrapper for Sanic.
 
 ```
 Notice:
+version 0.5 requires Sanic >= 21.3
+
 Works on Sanic >= 0.4.0 and MOTOR_URI need to be defined in app.config
 ```
 
@@ -19,13 +21,14 @@ Works on Sanic >= 0.4.0 and MOTOR_URI need to be defined in app.config
 from sanic import Sanic
 from sanic.response import json
 from sanic_jinja2 import SanicJinja2
+
 from sanic_motor import BaseModel
 
 app = Sanic(__name__)
 
-settings = dict(MOTOR_URI='mongodb://localhost:27017/myapp',
-                LOGO=None,
-                )
+settings = dict(
+    MOTOR_URI='mongodb://localhost:27017/myapp', LOGO=None
+)
 app.config.update(settings)
 
 BaseModel.init_app(app)

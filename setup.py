@@ -4,14 +4,16 @@ sanic-motor
 Simple Motor wrapper for sanic
 """
 import os
-from pathlib import Path
 import platform
+from pathlib import Path
+
 from setuptools import setup
 
 if platform.system().startswith("Windows"):
     os.environ["SANIC_NO_UVLOOP"] = "yes"
 
 p = Path(__file__) / "../sanic_motor/__init__.py"
+version = ""
 with p.resolve().open(encoding="utf-8") as f:
     for line in f:
         if line.startswith("__version__ = "):
@@ -30,7 +32,8 @@ setup(
     packages=["sanic_motor"],
     zip_safe=False,
     platforms="any",
-    install_requires=["motor>=2.0", "sanic>=0.4.0"],
+    install_requires=["motor>=2.0", "sanic>=21.3"],
+    python_requires=">=3.7",
     classifiers=[
         "Environment :: Web Environment",
         "Intended Audience :: Developers",
@@ -39,8 +42,6 @@ setup(
         "Programming Language :: Python",
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
         "Topic :: Software Development :: Libraries :: Python Modules",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3",
     ],
 )

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-try:
-    from sanic.log import logger
-except ImportError:
-    from sanic.log import log as logger
-
+from bson.codec_options import CodecOptions
+from bson.objectid import ObjectId
+from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import (
     ASCENDING,
     DESCENDING,
@@ -15,11 +13,9 @@ from pymongo import (
     HASHED,
     TEXT,
 )
-from bson.codec_options import CodecOptions
-from bson.objectid import ObjectId
-from motor.motor_asyncio import AsyncIOMotorClient
+from sanic.log import logger
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 INDEX_NAMES = dict(
     asc=ASCENDING,
@@ -116,9 +112,9 @@ class BaseModel:
         if not name:
             name = app.name
 
-        logger.info("opening motor connection for [{}]".format(name))
+        logger.info(f"opening motor connection for [{name}]")
         cls.connect_database(app, name, uri or app.config.MOTOR_URI, loop)
-        app.motor_client = app.motor_clients[name]
+        app.ctx.motor_client = app.ctx.motor_clients[name]
 
     @classmethod
     def connect_database(cls, app, name, uri, loop):
@@ -127,19 +123,19 @@ class BaseModel:
         cls.__dbkey__ = name
         cls.__motor_client__ = client
         cls.__motor_db__ = db
-        if not hasattr(app, "motor_clients"):
-            app.motor_clients = {}
+        if not hasattr(app.ctx, "motor_clients"):
+            app.ctx.motor_clients = {}
 
         # for closing use
-        app.motor_clients[name] = client
+        app.ctx.motor_clients[name] = client
         cls.__motor_clients__[name] = client
         cls.__motor_dbs__[name] = db
 
     @staticmethod
     def default_close_connection(app, loop):
-        if hasattr(app, "motor_clients"):
-            for name, client in app.motor_clients.items():
-                logger.info("closing motor connection for [{}]".format(name))
+        if hasattr(app.ctx, "motor_clients"):
+            for name, client in app.ctx.motor_clients.items():
+                logger.info(f"closing motor connection for [{name}]")
                 client.close()
 
     @property
@@ -157,7 +153,7 @@ class BaseModel:
         self.__dict__[key] = value
 
     def __repr__(self):
-        return "{}".format(self.__dict__)
+        return f"{self.__dict__}"
 
     def __getattr__(self, key):
         """just return None instead of key error"""
@@ -167,9 +163,7 @@ class BaseModel:
     def get_collection(cls, db=None):
         if "__coll__" not in cls.__dict__:
             raise ValueError(
-                "collection name is required, set {}.__coll__".format(
-                    cls.__name__
-                )
+                f"collection name is required, set {cls.__name__}.__coll__"
             )
 
         if not db:
