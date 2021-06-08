@@ -15,7 +15,7 @@ from pymongo import (
 )
 from sanic.log import logger
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 INDEX_NAMES = dict(
     asc=ASCENDING,
@@ -70,7 +70,7 @@ def get_uniq_spec(fields=[], doc={}):
 
 class BaseModel:
     __coll__ = None  # collection name
-    __dbkey__ = None  # which database connected to?
+    __dbkey__ = None  # connected to which database
     __unique_fields__ = []
     __motor_client__ = None
     __motor_db__ = None
@@ -91,6 +91,7 @@ class BaseModel:
         close_listener="before_server_stop",
         name=None,
         uri=None,
+        **kwargs,
     ):
         cls.__app__ = app
         cls.__apps__[name or app.name] = app
@@ -99,7 +100,7 @@ class BaseModel:
 
             @app.listener(open_listener)
             async def open_connection(app, loop):
-                cls.default_open_connection(app, loop, name, uri)
+                cls.default_open_connection(app, loop, name, uri, **kwargs)
 
         if close_listener:
 
@@ -108,17 +109,19 @@ class BaseModel:
                 cls.default_close_connection(app, loop)
 
     @classmethod
-    def default_open_connection(cls, app, loop, name=None, uri=None):
+    def default_open_connection(cls, app, loop, name=None, uri=None, **kwargs):
         if not name:
             name = app.name
 
         logger.info(f"opening motor connection for [{name}]")
-        cls.connect_database(app, name, uri or app.config.MOTOR_URI, loop)
+        cls.connect_database(
+            app, name, uri or app.config.MOTOR_URI, loop, **kwargs
+        )
         app.ctx.motor_client = app.ctx.motor_clients[name]
 
     @classmethod
-    def connect_database(cls, app, name, uri, loop):
-        client = AsyncIOMotorClient(uri, io_loop=loop)
+    def connect_database(cls, app, name, uri, loop, **kwargs):
+        client = AsyncIOMotorClient(uri, io_loop=loop, **kwargs)
         db = client.get_database()
         cls.__dbkey__ = name
         cls.__motor_client__ = client
