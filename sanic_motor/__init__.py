@@ -4,17 +4,10 @@
 from bson.codec_options import CodecOptions
 from bson.objectid import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import (
-    ASCENDING,
-    DESCENDING,
-    GEO2D,
-    GEOSPHERE,
-    HASHED,
-    TEXT,
-)
+from pymongo import ASCENDING, DESCENDING, GEO2D, GEOSPHERE, HASHED, TEXT
 from sanic.log import logger
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 INDEX_NAMES = dict(
     asc=ASCENDING,
